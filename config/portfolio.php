@@ -5,7 +5,7 @@ return [
     'name' => 'Seu Nome',
     'professional_name' => 'Seu Nome',
     'role' => 'Desenvolvedor de software freelancer',
-    'headline' => 'Projetar.\nDesenvolver.\nConstruir.',
+    'headline' => "Projetar.\nDesenvolver.\nConstruir.",
     'description' => 'Soluções digitais estruturadas para transformar necessidades reais em experiências funcionais.',
     'bio' => 'Sou um desenvolvedor em início de carreira, interessado em criar produtos digitais claros, acessíveis e bem estruturados. Este portfólio é um modelo demonstrativo. Personalize as informações e os projetos antes de apresentar seu trabalho.',
     'philosophy' => 'Antes de escrever código, é preciso compreender o problema. Antes de construir uma solução, é preciso projetar sua estrutura.',

@@ -1,1 +1,92 @@
-window.ArchRenderer={create(canvas){const gl=canvas.getContext('webgl2',{alpha:true,antialias:true,powerPreference:'low-power'})||canvas.getContext('webgl',{alpha:true,antialias:true,powerPreference:'low-power'});if(!gl)return null;const vertex=gl.createShader(gl.VERTEX_SHADER),fragment=gl.createShader(gl.FRAGMENT_SHADER);gl.shaderSource(vertex,ArchShaders.vertex);gl.compileShader(vertex);gl.shaderSource(fragment,ArchShaders.fragment);gl.compileShader(fragment);if(!gl.getShaderParameter(vertex,gl.COMPILE_STATUS)||!gl.getShaderParameter(fragment,gl.COMPILE_STATUS)){console.warn('Falha ao compilar shader do Architect Core.');return null}const program=gl.createProgram();gl.attachShader(program,vertex);gl.attachShader(program,fragment);gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS)){console.warn('Falha ao vincular shader do Architect Core.');return null;}gl.deleteShader(vertex);gl.deleteShader(fragment);gl.useProgram(program);const geo=ArchGeometry.cube(),pb=gl.createBuffer(),nb=gl.createBuffer(),ib=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,pb);gl.bufferData(gl.ARRAY_BUFFER,geo.positions,gl.STATIC_DRAW);let loc=gl.getAttribLocation(program,'aPosition');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,0,0);gl.bindBuffer(gl.ARRAY_BUFFER,nb);gl.bufferData(gl.ARRAY_BUFFER,geo.normals,gl.STATIC_DRAW);loc=gl.getAttribLocation(program,'aNormal');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,0,0);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,geo.indices,gl.STATIC_DRAW);gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);const U={mvp:gl.getUniformLocation(program,'uMvp'),model:gl.getUniformLocation(program,'uModel'),offset:gl.getUniformLocation(program,'uOffset'),explode:gl.getUniformLocation(program,'uExplode'),color:gl.getUniformLocation(program,'uColor'),blueprint:gl.getUniformLocation(program,'uBlueprint')};return {gl,program,geo,U,buffers:[pb,nb,ib],draw(mvp,model,offset,explode,color,blueprint,wire){gl.useProgram(program);gl.uniformMatrix4fv(U.mvp,false,mvp);gl.uniformMatrix4fv(U.model,false,model);gl.uniform3fv(U.offset,offset);gl.uniform1f(U.explode,explode);gl.uniform3fv(U.color,color);gl.uniform1f(U.blueprint,blueprint);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);if(wire){gl.drawElements(gl.LINES,36,gl.UNSIGNED_SHORT,0)}else gl.drawElements(gl.TRIANGLES,36,gl.UNSIGNED_SHORT,0)},resize(w,h,dpr){const w2=Math.max(1,Math.floor(w*Math.min(dpr,1.5))),h2=Math.max(1,Math.floor(h*Math.min(dpr,1.5)));if(canvas.width!==w2||canvas.height!==h2){canvas.width=w2;canvas.height=h2}gl.viewport(0,0,w2,h2)},dispose(){this.buffers.forEach(b=>gl.deleteBuffer(b));gl.deleteProgram(program)}}}};
+window.ArchRenderer = {
+  create(canvas) {
+    const gl = canvas.getContext('webgl2', { alpha: true, antialias: true, powerPreference: 'low-power' })
+      || canvas.getContext('webgl', { alpha: true, antialias: true, powerPreference: 'low-power' });
+    if (!gl) return null;
+
+    function compile(type, source) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.warn('Falha ao compilar shader do Architect Core:', gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+      }
+      return shader;
+    }
+
+    const vertex = compile(gl.VERTEX_SHADER, ArchShaders.vertex);
+    const fragment = compile(gl.FRAGMENT_SHADER, ArchShaders.fragment);
+    if (!vertex || !fragment) return null;
+    const program = gl.createProgram();
+    gl.attachShader(program, vertex);
+    gl.attachShader(program, fragment);
+    gl.linkProgram(program);
+    gl.deleteShader(vertex);
+    gl.deleteShader(fragment);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      console.warn('Falha ao vincular shader do Architect Core:', gl.getProgramInfoLog(program));
+      gl.deleteProgram(program);
+      return null;
+    }
+
+    gl.useProgram(program);
+    const geometry = ArchGeometry.cube();
+    const vertexBuffer = gl.createBuffer();
+    const normalBuffer = gl.createBuffer();
+    const indexBuffer = gl.createBuffer();
+    const edgeBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, geometry.positions, gl.STATIC_DRAW);
+    let attribute = gl.getAttribLocation(program, 'aPosition');
+    gl.enableVertexAttribArray(attribute);
+    gl.vertexAttribPointer(attribute, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, geometry.normals, gl.STATIC_DRAW);
+    attribute = gl.getAttribLocation(program, 'aNormal');
+    gl.enableVertexAttribArray(attribute);
+    gl.vertexAttribPointer(attribute, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geometry.indices, gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, edgeBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geometry.edges, gl.STATIC_DRAW);
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+
+    const uniforms = {
+      mvp: gl.getUniformLocation(program, 'uMvp'),
+      model: gl.getUniformLocation(program, 'uModel'),
+      color: gl.getUniformLocation(program, 'uColor'),
+      blueprint: gl.getUniformLocation(program, 'uBlueprint'),
+      wire: gl.getUniformLocation(program, 'uWire')
+    };
+    return {
+      gl,
+      draw(mvp, model, color, blueprint, wire) {
+        gl.useProgram(program);
+        gl.uniformMatrix4fv(uniforms.mvp, false, mvp);
+        gl.uniformMatrix4fv(uniforms.model, false, model);
+        gl.uniform3fv(uniforms.color, color);
+        gl.uniform1f(uniforms.blueprint, blueprint);
+        gl.uniform1f(uniforms.wire, wire ? 1 : 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, wire ? edgeBuffer : indexBuffer);
+        gl.drawElements(wire ? gl.LINES : gl.TRIANGLES, wire ? geometry.edges.length : geometry.indices.length, gl.UNSIGNED_SHORT, 0);
+      },
+      resize(width, height, pixelRatio) {
+        const ratio = Math.min(pixelRatio, 1.4);
+        const renderWidth = Math.max(1, Math.floor(width * ratio));
+        const renderHeight = Math.max(1, Math.floor(height * ratio));
+        if (canvas.width !== renderWidth || canvas.height !== renderHeight) {
+          canvas.width = renderWidth;
+          canvas.height = renderHeight;
+          gl.viewport(0, 0, renderWidth, renderHeight);
+        }
+      },
+      dispose() {
+        [vertexBuffer, normalBuffer, indexBuffer, edgeBuffer].forEach((buffer) => gl.deleteBuffer(buffer));
+        gl.deleteProgram(program);
+      }
+    };
+  }
+};
