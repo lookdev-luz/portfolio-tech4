@@ -42,9 +42,9 @@
     const whatsapp = document.getElementById('builder-whatsapp');
     const email = document.getElementById('builder-email');
     const message = buildSummary();
-    if (whatsapp) whatsapp.href = `${whatsapp.href.split('?')[0]}?text=${encodeURIComponent(message)}`;
+    if (whatsapp) { const target = whatsapp.dataset.base || whatsapp.href.split('?')[0]; whatsapp.dataset.base = target; whatsapp.href = `${target}?text=${encodeURIComponent(message)}`; }
     if (email) {
-      const address = email.href.slice(7).split('?')[0];
+      const address = email.dataset.address || email.href.slice(7).split('?')[0]; email.dataset.address = address;
       email.href = `mailto:${address}?subject=${encodeURIComponent('Conversa sobre um projeto')}&body=${encodeURIComponent(message)}`;
     }
   }

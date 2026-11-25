@@ -1,7 +1,6 @@
 window.ArchRenderer = {
   create(canvas) {
-    const gl = canvas.getContext('webgl2', { alpha: true, antialias: true, powerPreference: 'low-power' })
-      || canvas.getContext('webgl', { alpha: true, antialias: true, powerPreference: 'low-power' });
+    const gl = canvas.getContext('webgl', { alpha: true, antialias: true, powerPreference: 'low-power' });
     if (!gl) return null;
 
     function compile(type, source) {
@@ -18,7 +17,11 @@ window.ArchRenderer = {
 
     const vertex = compile(gl.VERTEX_SHADER, ArchShaders.vertex);
     const fragment = compile(gl.FRAGMENT_SHADER, ArchShaders.fragment);
-    if (!vertex || !fragment) return null;
+    if (!vertex || !fragment) {
+      if (vertex) gl.deleteShader(vertex);
+      if (fragment) gl.deleteShader(fragment);
+      return null;
+    }
     const program = gl.createProgram();
     gl.attachShader(program, vertex);
     gl.attachShader(program, fragment);
@@ -61,10 +64,13 @@ window.ArchRenderer = {
       blueprint: gl.getUniformLocation(program, 'uBlueprint'),
       wire: gl.getUniformLocation(program, 'uWire')
     };
+    const contextExtension = gl.getExtension('WEBGL_lose_context');
     return {
       gl,
+      contextExtension,
       draw(mvp, model, color, blueprint, wire) {
         gl.useProgram(program);
+        gl.disable(gl.CULL_FACE);
         gl.uniformMatrix4fv(uniforms.mvp, false, mvp);
         gl.uniformMatrix4fv(uniforms.model, false, model);
         gl.uniform3fv(uniforms.color, color);
@@ -72,6 +78,7 @@ window.ArchRenderer = {
         gl.uniform1f(uniforms.wire, wire ? 1 : 0);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, wire ? edgeBuffer : indexBuffer);
         gl.drawElements(wire ? gl.LINES : gl.TRIANGLES, wire ? geometry.edges.length : geometry.indices.length, gl.UNSIGNED_SHORT, 0);
+        gl.enable(gl.CULL_FACE);
       },
       resize(width, height, pixelRatio) {
         const ratio = Math.min(pixelRatio, 1.4);

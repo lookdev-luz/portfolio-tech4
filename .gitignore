@@ -1,3 +1,15 @@
 .DS_Store
 .env
+.env.*
 *.log
+*.tmp
+*.bak
+*.backup
+*.swp
+*~
+.phpunit.cache/
+playwright-report/
+test-results/
+node_modules/
+vendor/
+coverage/
