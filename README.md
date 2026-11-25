@@ -1,69 +1,118 @@
-# Code Architect — portfólio demonstrativo
+# Code Architect
 
-Modelo profissional em português para apresentar serviços de desenvolvimento freelancer. O repositório inclui conteúdo fictício de demonstração e nenhum contato de terceiros. Antes de publicar, personalize `config/portfolio.php`, substitua projetos-conceito por trabalho real e revise os textos. SEO permanece em `noindex,follow` enquanto `demo` estiver ativo.
-
-## Tecnologias
-
-PHP puro, HTML semântico, CSS, JavaScript nativo, Canvas, SVG e WebGL. Não há Composer, NPM, banco de dados ou etapa de compilação. O canvas usa shaders GLSL ES próprios e cubos com buffers persistentes. Caso WebGL falhe, o diagrama SVG permanece visível e controles/conteúdo continuam acessíveis.
+Portfólio demonstrativo em português brasileiro para serviços freelancers. Usa PHP puro, HTML semântico, CSS, JavaScript, SVG e WebGL nativo. Não requer Composer, NPM, Node.js, banco de dados, framework, compilação ou serviços externos. Os contatos vazios permanecem desativados e os exemplos de projetos são conceituais.
 
 ## Estrutura
 
-- `index.php`: composição da página.
-- `config/portfolio.php`: identidade, SEO e conteúdo editável.
-- `includes/`: escape, contatos, head, cabeçalho e rodapé.
-- `sections/`: conteúdo semântico por assunto.
-- `assets/css/`: variáveis, estilo, layout, componentes, animação e responsividade.
-- `assets/js/`: navegação e interações, visualizador e configurador.
-- `assets/js/webgl/`: matemática matricial, geometria, shaders, câmera e renderer.
+- `index.php` monta a página com includes por `__DIR__`.
+- `config/portfolio.php` centraliza perfil, SEO, tecnologias, serviços, projetos e componentes.
+- `includes/` contém escaping HTML, validação de URLs, caminhos de recursos e estrutura comum.
+- `sections/` contém as seções semânticas.
+- `assets/css/` contém identidade visual e regras responsivas.
+- `assets/js/` contém as interações, o configurador e o visualizador de projetos.
+- `assets/js/webgl/` contém matrizes, geometria, shaders GLSL e renderer.
 
-## Executar localmente
+## Clonar e executar
 
-Requer PHP 8+ com servidor embutido para desenvolvimento. A partir da raiz:
+Requer PHP 8.1 ou superior:
 
 ```sh
+git clone https://github.com/lookdev-luz/portfolio-tech4.git
+cd portfolio-tech4
 php -S 127.0.0.1:8080
 ```
 
-Acesse `http://127.0.0.1:8080`. O servidor PHP embutido é apenas para desenvolvimento, não exposição pública.
+Acesse `http://127.0.0.1:8080`. O servidor embutido é para desenvolvimento local. A função `asset_url()` resolve caminhos de recursos também em subdiretórios.
 
-## Personalização
+## Personalizar conteúdo e contatos
 
-Edite `config/portfolio.php`. Defina nome, cargo, biografia, localização e disponibilidade. Preencha contatos somente quando desejar publicá-los. Email e telefone são validados e WhatsApp aceita número internacional com dígitos. URLs de GitHub e LinkedIn precisam usar HTTPS. Contato vazio não produz link.
+Edite `config/portfolio.php` para atualizar nome, cargo, biografia, localização, disponibilidade e SEO. Configure somente contatos próprios:
 
-Edite os arrays `technologies`, `services`, `projects`, `builder_components` e `process` para ajustar as matrizes, ofertas, estudos e etapas. Cada projeto deve indicar seu caráter acadêmico, pessoal ou demonstrativo e conter apenas funcionalidades que realmente existem. Imagens podem ser adicionadas a `assets/images` e referenciadas por configuração, se o conteúdo da seção for adaptado.
+- GitHub em `github_user` e `github_url` usando HTTPS.
+- WhatsApp com código internacional e 10 a 15 dígitos, por exemplo `5511999999999`.
+- Telefone com DDI, aberto com `tel:`.
+- E-mail válido, aberto com `mailto:`.
+- LinkedIn com URL HTTPS completa.
 
-Altere as cores em `assets/css/variables.css`. Tipos Space Grotesk e Manrope usam fallback local sem fonte remota. IBM Plex Mono usa Courier New como alternativa.
+`safe_url()` aceita HTTP ou HTTPS. `e()` escapa texto HTML. Não guarde tokens ou credenciais no arquivo de configuração.
 
-## Interações e WebGL
+Os arrays `technologies`, `services`, `projects`, `builder_components` e `process` personalizam o conteúdo. Desative serviços por `enabled`. Em projetos, use dados verificáveis e indique se são demonstrativos, acadêmicos ou pessoais. Cores e escalas ficam em `assets/css/variables.css` e `assets/css/refinements.css`.
 
-O núcleo de arquitetura utiliza WebGL/WebGL2 nativo, GLSL, buffers de vértices e índices, perspectiva e matrizes próprias. Camadas de cubos são desenhadas a partir da mesma geometria. Structure mostra sólidos, Blueprint mostra linhas e Exploded afasta módulos. Arraste o canvas para rotacionar. O movimento reduz quando a aba está oculta, a cena sai da área visível ou o usuário prefere movimento reduzido. A resolução é limitada a DPR 1.5. Em perda do contexto, o SVG alternativo volta a ser mostrado.
+## Architect Core, geometria e shaders
 
-O configurador é uma representação SVG, compartilha o conteúdo textual das opções e não solicita dados ao servidor. Nome, objetivo e observações permanecem no navegador e só são incluídos em texto após ação de copiar, WhatsApp ou email. A estrutura não é recomendação final de produção. Os estudos de caso permitem alternar resumo, blueprint e fluxo conceitual.
+O Core usa WebGL 1.0 em um único canvas. `geometry.js` fornece vértices e índices de cubos para faces e arestas. `math.js` contém matrizes de projeção, rotação, translação e escala. `renderer.js` compila e vincula os shaders, verifica logs e configura buffers, atributos e uniforms. `shaders.js` implementa iluminação difusa simples. `architect-core.js` organiza cinco módulos com proporções próprias e gerencia câmera e modos.
 
-## Nginx e PHP-FPM
+A renderização roda sob demanda e durante transições. É suspensa fora da viewport e em abas ocultas. Buffers e programa são liberados durante a pausa e reconstruídos ao retomar. A resolução interna limita DPR a 1.4. Estrutura mostra volumes e arestas, Planta exibe desenho técnico e Camadas afasta os planos. Sem WebGL, o SVG alternativo continua visível.
 
-Aponte o `root` do site para a pasta do projeto, configure um pool PHP-FPM e encaminhe arquivos PHP ao socket correspondente. Exemplo simplificado:
+## Configurador e visualizador de projetos
 
-```nginx
-server {
-    listen 80;
-    server_name exemplo.com www.exemplo.com;
-    root /var/www/portfolio-tech4;
-    index index.php;
-    location / { try_files $uri $uri/ /index.php?$query_string; }
-    location ~ \\.php$ {
-        include fastcgi_params;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        fastcgi_pass unix:/run/php/php-fpm.sock;
-    }
-    location ~ /\\. { deny all; }
-}
+O Architecture Builder agrupa componentes de experiência, aplicação e infraestrutura. Conexões e dependências são relações conceituais para iniciar a conversa, não uma arquitetura definitiva. Nome, objetivo, módulos e observações só são preparados para copiar ou abrir em e-mail/WhatsApp após ação explícita. Campos vazios são omitidos. Nenhum dado é armazenado ou enviado automaticamente.
+
+O Project Blueprint Viewer alterna entre visão geral, planta e fluxo de dados conceitual. Exemplos não alegam implementação real.
+
+## Checklist antes da publicação
+
+- [ ] Alterar nome profissional.
+- [ ] Revisar cargo e biografia.
+- [ ] Adicionar foto própria, se desejado, e texto alternativo.
+- [ ] Configurar e testar e-mail.
+- [ ] Configurar e testar telefone.
+- [ ] Configurar e testar WhatsApp.
+- [ ] Configurar GitHub.
+- [ ] Configurar LinkedIn, se disponível.
+- [ ] Revisar tecnologias e serviços.
+- [ ] Substituir projetos demonstrativos por projetos reais verificáveis.
+- [ ] Revisar descrições, funcionalidades, diagramas e links.
+- [ ] Atualizar SEO, domínio e canonical.
+- [ ] Configurar e testar HTTPS.
+- [ ] Testar CTAs em celular e desktop.
+- [ ] Testar Core, modos, câmera e restauração em navegador com WebGL.
+- [ ] Testar fallback SVG sem WebGL.
+- [ ] Testar seleção, remoção, resumo, cópia e reinício do configurador.
+- [ ] Revisar layout mobile e zoom de 200%.
+- [ ] Confirmar ausência de dados pessoais de terceiros.
+- [ ] Após personalização, definir `demo` como `false` e `seo.index` como `true`.
+- [ ] Verificar robots, canonical e JSON-LD no HTML público.
+
+## Checklist de publicação
+
+- [ ] Alterar nome profissional, cargo e biografia.
+- [ ] Adicionar foto própria, se desejado, com texto alternativo.
+- [ ] Configurar e testar e-mail, telefone e WhatsApp.
+- [ ] Configurar GitHub e LinkedIn, se disponíveis.
+- [ ] Revisar tecnologias e serviços habilitados.
+- [ ] Trocar estudos demonstrativos por projetos reais e verificáveis.
+- [ ] Conferir descrições, diagramas e links dos projetos.
+- [ ] Atualizar title, descrição, canonical e domínio.
+- [ ] Configurar e testar HTTPS.
+- [ ] Testar CTAs em celular e computador.
+- [ ] Testar Architect Core, modos e fallback em navegador apropriado.
+- [ ] Testar selecionar, remover, copiar, compartilhar e reiniciar configurador.
+- [ ] Revisar teclado, mobile, leitor de tela e zoom de 200%.
+- [ ] Retirar informações pessoais de terceiros.
+- [ ] Após personalizar, definir `demo` como `false` e `seo.index` como `true`.
+- [ ] Conferir robots, canonical e JSON-LD no HTML servido.
+
+## Nginx e PHP-FPM em Ubuntu
+
+Diretório de referência: `/var/www/portfolio-tech4`. Configure o document root, `index.php`, PHP-FPM e o socket disponível, que depende da versão instalada, por exemplo `/run/php/php8.3-fpm.sock`. CSS, JS e SVG são estáticos. O projeto não usa `.htaccess` ou endpoints PHP públicos adicionais.
+
+A política de produção Nginx deve enviar apenas `/index.php` ao PHP-FPM e negar a execução pública de outros arquivos PHP. Bloqueie acesso HTTP a `config/`, `includes/`, `sections/`, `.git/`, arquivos ocultos, logs, backups e ferramentas de desenvolvimento. Confira os MIME types dos recursos estáticos no host. A configuração exata depende do virtual host e precisa ser revisada por quem o administra. O projeto não altera o servidor, Certbot ou permissões e não executa deploy.
+
+Configure certificado HTTPS válido e redirecionamento HTTP segundo o processo do host. Atualize canonical para o domínio final. Mantenha noindex enquanto os dados forem demonstrativos.
+
+## HestiaCP
+
+Caminho ilustrativo: `/home/USUARIO/web/DOMINIO/public_html/`. Substitua os marcadores. Transfira os arquivos com SFTP ou mecanismo aprovado, selecione PHP compatível e confira as regras Nginx/PHP geradas pelo HestiaCP. Configure HTTPS pelo painel e confira a renovação. Não edite arquivos administrados pelo painel fora do fluxo de templates previsto.
+
+## Atualizações e arquivos privados
+
+Mantenha uma cópia personalizada de `config/portfolio.php` fora do document root. Ao atualizar o template, compare e reaplique as personalizações ou faça merge em branch própria. Deixe `.git`, backups, logs e arquivos temporários fora da pasta pública. Restrinja permissões pelo proprietário e grupo apropriados. Não use `777`.
+
+Verificações locais:
+
+```sh
+find . -name '*.php' -print0 | xargs -0 -n1 php -l
+git status --short
+git diff --check
 ```
-
-Adapte versão/socket e configuração à distribuição. Em hospedagem HestiaCP, carregue arquivos para o document root do domínio pela interface ou SFTP, selecione PHP disponível e confira as regras Nginx/PHP geradas pelo painel. Não edite arquivos gerenciados pelo Hestia sem conhecer o fluxo de templates do painel.
-
-Habilite HTTPS pelo painel ou configure certificado válido no servidor, redirecione HTTP para HTTPS e confirme a renovação automática. Atualize `seo.canonical` para a URL final sem barra de rastreamento e `seo.title` / descrição. Após revisar todos os dados e remover conteúdo demonstrativo, defina `demo` como `false` e `seo.index` como `true`. Verifique o HTML servido para confirmar a diretiva robots desejada e os dados estruturados.
-
-## Segurança e publicação
-
-Conteúdo dinâmico de texto usa `htmlspecialchars`. Links externos aceitam somente HTTP(S) e abrem em contexto separado com `noopener noreferrer`. Não há banco de dados, armazenamento de formulário, endpoint administrativo ou envio automático. Configure backups e permissões de leitura para o usuário do servidor web conforme a hospedagem.

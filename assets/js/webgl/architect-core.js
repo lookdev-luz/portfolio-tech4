@@ -2,12 +2,11 @@
   const canvas = document.getElementById('architect-core');
   if (!canvas) return;
 
-  const renderer = ArchRenderer.create(canvas);
-  if (!renderer) return;
-
   const panel = document.querySelector('.core-panel');
   const status = document.getElementById('webgl-status');
-  const gl = renderer.gl;
+  let renderer = null;
+  let gl = null;
+  let contextExtension = null;
   const M = ArchMath;
   const projection = ArchCamera.projection();
   const view = ArchCamera.model();
@@ -35,11 +34,26 @@
   let isVisible = false;
   let contextLost = false;
   let lastTime = 0;
+  let destroyed = false;
+
+  function initialize() {
+    renderer = ArchRenderer.create(canvas);
+    if (!renderer) {
+      panel.classList.remove('webgl-ready');
+      status.textContent = 'ALTERNATIVA SVG';
+      return false;
+    }
+    gl = renderer.gl;
+    contextExtension = renderer.contextExtension;
+    panel.classList.add('webgl-ready');
+    status.textContent = 'ATIVO';
+    return true;
+  }
 
   function render(time) {
     frame = 0;
-    if (!isVisible || document.hidden || contextLost) return;
-    const elapsed = Math.min((time - lastTime) / 1000 || 0, 0.05);
+    if (!renderer || !isVisible || document.hidden || contextLost || destroyed) return;
+    const elapsed = Math.min((time - lastTime) / 1000 || 1 / 60, 0.05);
     lastTime = time;
     const easing = 1 - Math.exp(-8 * elapsed);
     separation += (targetSeparation - separation) * easing;
@@ -76,7 +90,21 @@
   }
 
   function schedule() {
-    if (!frame && !document.hidden && isVisible && !contextLost) frame = requestAnimationFrame(render);
+    if (renderer && !frame && !document.hidden && isVisible && !contextLost && !destroyed) frame = requestAnimationFrame(render);
+  }
+
+  function releaseResources() {
+    if (frame) cancelAnimationFrame(frame);
+    frame = 0;
+    if (renderer && renderer.contextExtension) contextExtension = renderer.contextExtension;
+    if (renderer && !contextLost) renderer.dispose();
+    renderer = null;
+    gl = null;
+  }
+
+  function recreateRenderer() {
+    if (contextLost || document.hidden || !isVisible || destroyed) return;
+    if (initialize()) schedule();
   }
 
   function setMode(button) {
@@ -90,14 +118,16 @@
 
   const visibility = new IntersectionObserver((entries) => {
     isVisible = entries[0].isIntersecting;
-    if (isVisible) schedule();
-    else if (frame) {
-      cancelAnimationFrame(frame);
-      frame = 0;
-    }
+    if (isVisible && !renderer && !contextLost) recreateRenderer();
+    if (isVisible && renderer) schedule();
+    else releaseResources();
   });
   visibility.observe(canvas);
-  document.addEventListener('visibilitychange', schedule);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) releaseResources();
+    else if (isVisible && !renderer && !contextLost) recreateRenderer();
+    schedule();
+  });
   new ResizeObserver(schedule).observe(canvas);
 
   document.querySelectorAll('[data-core-mode]').forEach((button) => {
@@ -124,13 +154,31 @@
   canvas.addEventListener('webglcontextlost', (event) => {
     event.preventDefault();
     contextLost = true;
+    releaseResources();
     panel.classList.remove('webgl-ready');
     status.textContent = 'ALTERNATIVA SVG';
   });
-  canvas.addEventListener('webglcontextrestored', () => window.location.reload());
+  canvas.addEventListener('webglcontextrestored', () => {
+    contextLost = false;
+    recreateRenderer();
+  });
+  window.addEventListener('pagehide', () => {
+    destroyed = true;
+    releaseResources();
+    visibility.disconnect();
+  }, { once: true });
 
-  if (reducedMotion) canvas.setAttribute('aria-description', 'Use os controles para atualizar a visualização.');
-  panel.classList.add('webgl-ready');
-  status.textContent = 'ATIVO';
+  if (reducedMotion) canvas.setAttribute('aria-description', 'A animação permanece parada até interação.');
+  canvas.addEventListener('keydown', (event) => {
+    const step = event.shiftKey ? 0.12 : 0.06;
+    if (event.key === 'ArrowLeft') yaw -= step;
+    else if (event.key === 'ArrowRight') yaw += step;
+    else if (event.key === 'ArrowUp') pitch = Math.max(-1.1, pitch - step);
+    else if (event.key === 'ArrowDown') pitch = Math.min(1.1, pitch + step);
+    else return;
+    event.preventDefault(); schedule();
+  });
+  document.querySelectorAll('[data-core-layer]').forEach((button) => button.addEventListener('click', () => { button.setAttribute('aria-pressed', String(button.getAttribute('aria-pressed') !== 'true')); schedule(); }));
+  initialize();
   schedule();
 })();
