@@ -1,0 +1,1 @@
+@media(prefers-reduced-motion:no-preference){.service-detail,.project-item,.tech-detail{animation:rise .25s ease both}@keyframes rise{from{opacity:.3;transform:translateY(5px)}to{opacity:1;transform:none}}.status-dot{animation:pulse 2.5s infinite}@keyframes pulse{50%{box-shadow:0 0 0 7px #98c37910}}}
