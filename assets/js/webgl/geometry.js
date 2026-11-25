@@ -1,1 +1,31 @@
-window.ArchGeometry={cube(){return {positions:new Float32Array([-1,-1,1,1,-1,1,1,1,1,-1,1,1,1,-1,-1,-1,-1,-1,-1,1,-1,1,1,-1,-1,-1,-1,-1,-1,1,-1,1,1,-1,1,-1,-1,1,1,-1,1,-1,1,1,1,1,1,1,-1,-1,-1,-1,-1,1,1,-1,1,1,-1,-1]),normals:new Float32Array([0,0,1,0,0,1,0,0,1,0,0,1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,-1,0,0,-1,0,0,-1,0,0,-1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,1,0,0,1,0,0,1,0,0,1,0]),indices:new Uint16Array([0,1,2,0,2,3,4,5,6,4,6,7,8,9,10,8,10,11,12,13,14,12,14,15,16,17,18,16,18,19,20,21,22,20,22,23])}}};
+window.ArchGeometry = {
+  cube() {
+    const faces = [
+      [[0, 0, 1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]],
+      [[0, 0, -1], [1, -1, -1], [-1, -1, -1], [-1, 1, -1], [1, 1, -1]],
+      [[-1, 0, 0], [-1, -1, -1], [-1, -1, 1], [-1, 1, 1], [-1, 1, -1]],
+      [[1, 0, 0], [1, -1, 1], [1, -1, -1], [1, 1, -1], [1, 1, 1]],
+      [[0, 1, 0], [-1, 1, 1], [1, 1, 1], [1, 1, -1], [-1, 1, -1]],
+      [[0, -1, 0], [-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1]]
+    ];
+    const positions = [];
+    const normals = [];
+    const indices = [];
+    const edges = [];
+    faces.forEach(([normal, ...corners], face) => {
+      const base = face * 4;
+      corners.forEach((point) => {
+        positions.push(...point);
+        normals.push(...normal);
+      });
+      indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+      edges.push(base, base + 1, base + 1, base + 2, base + 2, base + 3, base + 3, base);
+    });
+    return {
+      positions: new Float32Array(positions),
+      normals: new Float32Array(normals),
+      indices: new Uint16Array(indices),
+      edges: new Uint16Array(edges)
+    };
+  }
+};

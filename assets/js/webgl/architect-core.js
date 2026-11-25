@@ -1,1 +1,136 @@
-(function(){const canvas=document.getElementById('architect-core');if(!canvas)return;const renderer=ArchRenderer.create(canvas);if(!renderer)return;document.querySelector('.core-panel').classList.add('webgl-ready');document.getElementById('webgl-status').textContent='ATIVO';const gl=renderer.gl,M=ArchMath,proj=ArchCamera.projection(),model=ArchCamera.model(),rx=new Float32Array(16),ry=new Float32Array(16),temp=new Float32Array(16),mvp=new Float32Array(16);let yaw=.65,pitch=-.48,drag=null,mode='structure',explosion=0,target=0,raf=0,visible=true,lost=false,last=0;const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;function draw(time){raf=0;if(!visible||document.hidden||lost)return;if(!reduced&&time-last<32){raf=requestAnimationFrame(draw);return}last=time;const rect=canvas.getBoundingClientRect();renderer.resize(rect.width,rect.height,devicePixelRatio||1);gl.clearColor(.06,.06,.06,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);M.perspective(proj,Math.PI/4,canvas.width/canvas.height,.1,100);M.rotateY(ry,yaw);M.rotateX(rx,pitch);M.multiply(temp,ry,rx);M.translate(model,0,0,-7);M.multiply(mvp,proj,model);M.multiply(mvp,mvp,temp);explosion+=(target-explosion)*.08;const offsets=[[0,1.4,0],[0,.7,0],[0,0,0],[0,-.7,0],[0,-1.4,0]],colors=[[.97,.45,.12],[.75,.3,.08],[.98,.68,.35],[.65,.3,.12],[.9,.4,.1]];for(let i=0;i<5;i++){const layerModel=new Float32Array(model);M.translate(layerModel,0,offsets[i][1]*explosion,0);M.multiply(layerModel,layerModel,temp);const layerMvp=new Float32Array(16);M.multiply(layerMvp,proj,layerModel);M.scale(layerModel,.8,.34,.8);M.multiply(layerMvp,proj,layerModel);renderer.draw(layerMvp,layerModel,[0,0,0],0,colors[i],mode==='blueprint'?1:0,mode==='blueprint')}}function start(){if(!raf&&!document.hidden&&visible&&!lost)raf=requestAnimationFrame(draw)}const observer=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;if(visible)start();else if(raf){cancelAnimationFrame(raf);raf=0}});observer.observe(canvas);document.addEventListener('visibilitychange',start);new ResizeObserver(start).observe(canvas);canvas.addEventListener('pointerdown',e=>{drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(!drag)return;yaw+=(e.clientX-drag[0])*.008;pitch=Math.max(-1.2,Math.min(1.2,pitch+(e.clientY-drag[1])*.008));drag=[e.clientX,e.clientY];start()});canvas.addEventListener('pointerup',()=>drag=null);document.querySelectorAll('[data-core-mode]').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.coreMode;target=mode==='exploded'?1:0;document.querySelectorAll('[data-core-mode]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));start()}));document.querySelector('[data-core-reset]').addEventListener('click',()=>{yaw=.65;pitch=-.48;mode='structure';target=0;document.querySelectorAll('[data-core-mode]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.coreMode==='structure')));start()});canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();lost=true;if(raf)cancelAnimationFrame(raf);document.querySelector('.core-panel').classList.remove('webgl-ready');document.getElementById('webgl-status').textContent='ALTERNATIVA SVG'});canvas.addEventListener('webglcontextrestored',()=>{location.reload()});start()})();
+(function () {
+  const canvas = document.getElementById('architect-core');
+  if (!canvas) return;
+
+  const renderer = ArchRenderer.create(canvas);
+  if (!renderer) return;
+
+  const panel = document.querySelector('.core-panel');
+  const status = document.getElementById('webgl-status');
+  const gl = renderer.gl;
+  const M = ArchMath;
+  const projection = ArchCamera.projection();
+  const view = ArchCamera.model();
+  const rotationX = new Float32Array(16);
+  const rotationY = new Float32Array(16);
+  const rotation = new Float32Array(16);
+  const transform = new Float32Array(16);
+  const mvp = new Float32Array(16);
+  const layers = [
+    { label: 'INTERFACE', color: [0.98, 0.58, 0.24], size: [1.3, 0.14, 0.9], y: 1.48, offset: 1.4 },
+    { label: 'APLICAÇÃO', color: [0.86, 0.37, 0.11], size: [0.88, 0.3, 0.72], y: 0.74, offset: 0.7 },
+    { label: 'SERVIÇOS', color: [0.97, 0.69, 0.4], size: [0.55, 0.23, 0.56], y: 0.03, offset: 0 },
+    { label: 'DADOS', color: [0.72, 0.31, 0.1], size: [0.96, 0.2, 0.72], y: -0.65, offset: -0.7 },
+    { label: 'INFRA', color: [0.91, 0.45, 0.16], size: [1.25, 0.12, 0.88], y: -1.31, offset: -1.4 }
+  ];
+  const buffers = layers.map(() => ({ model: new Float32Array(16), mvp: new Float32Array(16) }));
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let yaw = 0.62;
+  let pitch = -0.42;
+  let pointer = null;
+  let mode = 'structure';
+  let separation = 0;
+  let targetSeparation = 0;
+  let frame = 0;
+  let isVisible = false;
+  let contextLost = false;
+  let lastTime = 0;
+
+  function render(time) {
+    frame = 0;
+    if (!isVisible || document.hidden || contextLost) return;
+    const elapsed = Math.min((time - lastTime) / 1000 || 0, 0.05);
+    lastTime = time;
+    const easing = 1 - Math.exp(-8 * elapsed);
+    separation += (targetSeparation - separation) * easing;
+
+    const bounds = canvas.getBoundingClientRect();
+    renderer.resize(bounds.width, bounds.height, devicePixelRatio || 1);
+    gl.clearColor(0.055, 0.055, 0.055, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    M.perspective(projection, Math.PI / 4.1, canvas.width / canvas.height, 0.1, 60);
+    M.translate(view, 0, 0, -7.5);
+    M.rotateY(rotationY, yaw);
+    M.rotateX(rotationX, pitch);
+    M.multiply(rotation, rotationY, rotationX);
+    M.multiply(transform, view, rotation);
+
+    layers.forEach((layer, index) => {
+      const matrices = buffers[index];
+      const lift = mode === 'exploded' ? layer.offset * separation : 0;
+      M.translate(matrices.model, 0, layer.y + lift, 0);
+      M.multiply(matrices.model, transform, matrices.model);
+      M.scale(matrices.model, ...layer.size);
+      M.multiply(matrices.mvp, projection, matrices.model);
+      const blueprint = mode === 'blueprint' ? 1 : 0;
+      renderer.draw(matrices.mvp, matrices.model, [0, 0, 0], 0, layer.color, blueprint, false);
+
+      if (mode !== 'blueprint') {
+        gl.depthFunc(gl.LEQUAL);
+        renderer.draw(matrices.mvp, matrices.model, [0, 0, 0], 0, [1, 0.43, 0.12], 1, true);
+        gl.depthFunc(gl.LESS);
+      }
+    });
+
+    if (mode === 'exploded' && Math.abs(targetSeparation - separation) > 0.002) schedule();
+  }
+
+  function schedule() {
+    if (!frame && !document.hidden && isVisible && !contextLost) frame = requestAnimationFrame(render);
+  }
+
+  function setMode(button) {
+    mode = button.dataset.coreMode;
+    targetSeparation = mode === 'exploded' ? 1 : 0;
+    document.querySelectorAll('[data-core-mode]').forEach((control) => {
+      control.setAttribute('aria-pressed', String(control === button));
+    });
+    schedule();
+  }
+
+  const visibility = new IntersectionObserver((entries) => {
+    isVisible = entries[0].isIntersecting;
+    if (isVisible) schedule();
+    else if (frame) {
+      cancelAnimationFrame(frame);
+      frame = 0;
+    }
+  });
+  visibility.observe(canvas);
+  document.addEventListener('visibilitychange', schedule);
+  new ResizeObserver(schedule).observe(canvas);
+
+  document.querySelectorAll('[data-core-mode]').forEach((button) => {
+    button.addEventListener('click', () => setMode(button));
+  });
+  document.querySelector('[data-core-reset]').addEventListener('click', () => {
+    yaw = 0.62;
+    pitch = -0.42;
+    setMode(document.querySelector('[data-core-mode="structure"]'));
+  });
+  canvas.addEventListener('pointerdown', (event) => {
+    pointer = [event.clientX, event.clientY];
+    canvas.setPointerCapture(event.pointerId);
+  });
+  canvas.addEventListener('pointermove', (event) => {
+    if (!pointer) return;
+    yaw += (event.clientX - pointer[0]) * 0.008;
+    pitch = Math.max(-1.1, Math.min(1.1, pitch + (event.clientY - pointer[1]) * 0.008));
+    pointer = [event.clientX, event.clientY];
+    schedule();
+  });
+  canvas.addEventListener('pointerup', () => { pointer = null; });
+  canvas.addEventListener('pointercancel', () => { pointer = null; });
+  canvas.addEventListener('webglcontextlost', (event) => {
+    event.preventDefault();
+    contextLost = true;
+    panel.classList.remove('webgl-ready');
+    status.textContent = 'ALTERNATIVA SVG';
+  });
+  canvas.addEventListener('webglcontextrestored', () => window.location.reload());
+
+  if (reducedMotion) canvas.setAttribute('aria-description', 'Use os controles para atualizar a visualização.');
+  panel.classList.add('webgl-ready');
+  status.textContent = 'ATIVO';
+  schedule();
+})();

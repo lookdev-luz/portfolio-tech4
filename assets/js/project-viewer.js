@@ -1,1 +1,119 @@
-(function(){const dialog=document.querySelector('.project-dialog');if(!dialog)return;const projects=JSON.parse(document.getElementById('project-data').textContent),content=dialog.querySelector('.dialog-content');document.querySelectorAll('.project-open').forEach(button=>button.addEventListener('click',()=>{const p=projects[Number(button.dataset.project)];content.replaceChildren();const title=document.createElement('h2');title.id='dialog-title';title.textContent=p.name;content.append(title);const badge=document.createElement('p');badge.textContent=p.type+' · Arquitetura e funcionalidades descritas são demonstrativas.';content.append(badge);const tabs=document.createElement('div');tabs.className='viewer-tabs';tabs.setAttribute('role','tablist');const panel=document.createElement('div');panel.className='viewer-panel';panel.setAttribute('role','tabpanel');content.append(tabs,panel);const modes=['Visão geral','Blueprint','Fluxo de dados'];function render(mode){tabs.replaceChildren();modes.forEach((name,i)=>{const b=document.createElement('button');b.textContent=name;b.setAttribute('role','tab');b.setAttribute('aria-pressed',String(i===mode));b.addEventListener('click',()=>render(i));tabs.append(b)});panel.replaceChildren();if(mode===0){const h=document.createElement('h3');h.textContent='Objetivo';const p1=document.createElement('p');p1.textContent=p.objective;const h2=document.createElement('h3');h2.textContent='Questão considerada';const p2=document.createElement('p');p2.textContent=p.problem;const ul=document.createElement('ul');p.features.forEach(x=>{const li=document.createElement('li');li.textContent=x;ul.append(li)});panel.append(h,p1,h2,p2,ul)}else{const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 700 220');svg.setAttribute('role','img');svg.setAttribute('aria-label',mode===1?'Diagrama conceitual de interface, aplicação e dados':'Fluxo conceitual entre pessoa usuária, interface, servidor e dados');const labels=mode===1?['INTERFACE','APLICAÇÃO','DADOS']:['PESSOA','INTERFACE','SERVIDOR','DADOS'];labels.forEach((label,i)=>{const x=25+i*170;const rect=document.createElementNS(svg.namespaceURI,'rect');rect.setAttribute('x',x);rect.setAttribute('y','75');rect.setAttribute('width','125');rect.setAttribute('height','58');rect.setAttribute('fill','#1c1c1c');rect.setAttribute('stroke','#f97316');const text=document.createElementNS(svg.namespaceURI,'text');text.setAttribute('x',x+62);text.setAttribute('y','108');text.setAttribute('fill','#fafafa');text.setAttribute('text-anchor','middle');text.setAttribute('font-size','11');text.textContent=label;svg.append(rect,text);if(i<labels.length-1){const line=document.createElementNS(svg.namespaceURI,'path');line.setAttribute('d',`M${x+125} 104h40m-6-5 6 5-6 5`);line.setAttribute('stroke','#f97316');line.setAttribute('fill','none');svg.append(line)}});const note=document.createElement('p');note.textContent='Representação conceitual para discussão, não descreve uma implementação existente.';panel.append(svg,note)}}render(0);dialog.showModal()}));dialog.querySelector('.dialog-close').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()})})();
+(function () {
+  const dialog = document.querySelector('.project-dialog');
+  if (!dialog) return;
+  const projects = JSON.parse(document.getElementById('project-data').textContent);
+  const content = dialog.querySelector('.dialog-content');
+  const svgNS = 'http://www.w3.org/2000/svg';
+
+  function element(tag, text, className) {
+    const node = document.createElement(tag);
+    if (text) node.textContent = text;
+    if (className) node.className = className;
+    return node;
+  }
+
+  function renderOverview(project, panel) {
+    const objectiveHeading = element('h3', 'Objetivo do estudo');
+    const objective = element('p', project.objective);
+    const contextHeading = element('h3', 'Questão considerada');
+    const context = element('p', project.problem);
+    const list = element('ul');
+    project.features.forEach((feature) => list.append(element('li', feature)));
+    panel.append(objectiveHeading, objective, contextHeading, context, list);
+  }
+
+  function renderDiagram(project, panel, dataFlow) {
+    const labels = dataFlow
+      ? ['PESSOA', 'INTERFACE', 'APLICAÇÃO', 'DADOS']
+      : ['INTERFACE', 'APLICAÇÃO', 'SERVIÇOS', 'DADOS'];
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 760 250');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', dataFlow
+      ? 'Fluxo conceitual da pessoa usuária até as informações'
+      : 'Planta conceitual das camadas de uma solução web');
+    labels.forEach((label, index) => {
+      const x = 14 + index * 188;
+      const y = dataFlow ? 88 + (index % 2 ? 20 : 0) : 78 + index * 5;
+      const group = document.createElementNS(svgNS, 'g');
+      group.setAttribute('class', 'blueprint-node');
+      const rect = document.createElementNS(svgNS, 'rect');
+      rect.setAttribute('x', x);
+      rect.setAttribute('y', y);
+      rect.setAttribute('width', '144');
+      rect.setAttribute('height', '66');
+      const number = document.createElementNS(svgNS, 'text');
+      number.setAttribute('x', x + 12);
+      number.setAttribute('y', y + 18);
+      number.setAttribute('class', 'blueprint-number');
+      number.textContent = `0${index + 1}`;
+      const title = document.createElementNS(svgNS, 'text');
+      title.setAttribute('x', x + 72);
+      title.setAttribute('y', y + 40);
+      title.setAttribute('text-anchor', 'middle');
+      title.setAttribute('class', 'blueprint-label');
+      title.textContent = label;
+      group.append(rect, number, title);
+      svg.append(group);
+      if (index < labels.length - 1) {
+        const connector = document.createElementNS(svgNS, 'path');
+        const nextY = dataFlow ? 88 + ((index + 1) % 2 ? 20 : 0) : 78 + (index + 1) * 5;
+        connector.setAttribute('d', `M${x + 144} ${y + 33} H${x + 174} L${x + 184} ${nextY + 33}`);
+        connector.setAttribute('class', 'blueprint-link');
+        svg.insertBefore(connector, group);
+      }
+    });
+    panel.append(svg, element('p', 'Diagrama conceitual para apoiar a conversa. Não descreve um sistema implementado.'));
+  }
+
+  function openProject(project) {
+    content.replaceChildren();
+    const title = element('h2', project.name);
+    title.id = 'dialog-title';
+    content.append(title, element('p', `${project.type} · Estudo demonstrativo`));
+    const tabs = element('div', null, 'viewer-tabs');
+    tabs.setAttribute('role', 'tablist');
+    tabs.setAttribute('aria-label', 'Perspectiva do estudo');
+    const panel = element('div', null, 'viewer-panel');
+    panel.setAttribute('role', 'tabpanel');
+    panel.id = 'project-viewer-panel';
+    content.append(tabs, panel);
+    const modes = [
+      { label: 'Visão geral', render: () => renderOverview(project, panel) },
+      { label: 'Planta', render: () => renderDiagram(project, panel, false) },
+      { label: 'Fluxo de dados', render: () => renderDiagram(project, panel, true) }
+    ];
+    function select(index) {
+      tabs.replaceChildren();
+      modes.forEach((mode, tabIndex) => {
+        const button = element('button', mode.label);
+        button.setAttribute('role', 'tab');
+        button.setAttribute('aria-selected', String(index === tabIndex));
+        button.setAttribute('aria-controls', panel.id);
+        button.tabIndex = index === tabIndex ? 0 : -1;
+        button.addEventListener('click', () => select(tabIndex));
+        button.addEventListener('keydown', (event) => {
+          if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+          event.preventDefault();
+          const next = (tabIndex + (event.key === 'ArrowRight' ? 1 : modes.length - 1)) % modes.length;
+          select(next);
+          tabs.children[next].focus();
+        });
+        tabs.append(button);
+      });
+      panel.replaceChildren();
+      modes[index].render();
+    }
+    select(0);
+    dialog.showModal();
+    tabs.children[0].focus();
+  }
+
+  document.querySelectorAll('.project-open').forEach((button) => {
+    button.addEventListener('click', () => openProject(projects[Number(button.dataset.project)]));
+  });
+  dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
+  dialog.addEventListener('click', (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+})();
