@@ -14,7 +14,7 @@
   const rotationY = new Float32Array(16);
   const rotation = new Float32Array(16);
   const transform = new Float32Array(16);
-  const mvp = new Float32Array(16);
+  const layerScale = new Float32Array(16);
   const layers = [
     { label: 'INTERFACE', color: [0.98, 0.58, 0.24], size: [1.3, 0.14, 0.9], y: 1.48, offset: 1.4 },
     { label: 'APLICAÇÃO', color: [0.86, 0.37, 0.11], size: [0.88, 0.3, 0.72], y: 0.74, offset: 0.7 },
@@ -74,15 +74,17 @@
       const lift = mode === 'exploded' ? layer.offset * separation : 0;
       M.translate(matrices.model, 0, layer.y + lift, 0);
       M.multiply(matrices.model, transform, matrices.model);
-      M.scale(matrices.model, ...layer.size);
+      M.scale(layerScale, ...layer.size);
+      M.multiply(matrices.model, matrices.model, layerScale);
       M.multiply(matrices.mvp, projection, matrices.model);
       const blueprint = mode === 'blueprint' ? 1 : 0;
-      renderer.draw(matrices.mvp, matrices.model, [0, 0, 0], 0, layer.color, blueprint, false);
-
       if (mode !== 'blueprint') {
+        renderer.draw(matrices.mvp, matrices.model, layer.color, 0, false);
         gl.depthFunc(gl.LEQUAL);
-        renderer.draw(matrices.mvp, matrices.model, [0, 0, 0], 0, [1, 0.43, 0.12], 1, true);
+        renderer.draw(matrices.mvp, matrices.model, [1, 0.43, 0.12], 1, true);
         gl.depthFunc(gl.LESS);
+      } else {
+        renderer.draw(matrices.mvp, matrices.model, layer.color, 1, true);
       }
     });
 

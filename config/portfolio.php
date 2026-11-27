@@ -2,11 +2,11 @@
 // Personalize este arquivo antes de publicar. Dados demonstrativos ficam sem contatos reais.
 return [
     'demo' => true,
-    'name' => 'Seu Nome',
-    'professional_name' => 'Seu Nome',
-    'role' => 'Desenvolvedor de software freelancer',
-    'headline' => "Projetar.\nDesenvolver.\nConstruir.",
-    'description' => 'Soluções digitais estruturadas para transformar necessidades reais em experiências funcionais.',
+    'name' => 'Rafael Monte (demonstração)',
+    'professional_name' => 'Rafael Monte',
+    'role' => 'Estudante de infraestrutura e redes',
+    'headline' => "Planejar.\nConectar.\nOperar.",
+    'description' => 'Estudos demonstrativos de redes, servidores e arquitetura de sistemas.',
     'bio' => 'Sou um desenvolvedor em início de carreira, interessado em criar produtos digitais claros, acessíveis e bem estruturados. Este portfólio é um modelo demonstrativo. Personalize as informações e os projetos antes de apresentar seu trabalho.',
     'philosophy' => 'Antes de escrever código, é preciso compreender o problema. Antes de construir uma solução, é preciso projetar sua estrutura.',
     'photo' => '', 'email' => '', 'phone' => '', 'whatsapp' => '', 'github_user' => '', 'github_url' => '', 'linkedin' => '',
